@@ -1,4 +1,4 @@
-# MCP Browser Tabs
+# MCP Browser Buddy
 
 Model Context Protocol server for retrieving and managing Chrome browser tabs information. This allows Claude Desktop (or any MCP client) to fetch information about and control currently open Chrome tabs.
 
@@ -11,9 +11,9 @@ To use this tool with Claude Desktop, simply add the following to your Claude De
 ```json
 {
   "tools": {
-    "browser-tabs": {
+    "browser-buddy": {
       "command": "npx",
-      "args": ["-y", "@kazuph/mcp-browser-tabs"]
+      "args": ["-y", "@dacodedbeat/mcp-browser-buddy"]
     }
   }
 }
@@ -47,27 +47,60 @@ The following sections are for those who want to develop or modify the tool.
 ### Installation
 
 ```bash
-git clone https://github.com/kazuph/mcp-browser-tabs.git
-cd mcp-browser-tabs
+git clone https://github.com/dacodedbeat/mcp-browser-buddy.git
+cd mcp-browser-buddy
 npm install
 npm run build
 ```
 
+## Security Considerations
+
+**This server provides powerful capabilities that give an LLM control over your web browser.**
+
+By using this server, you are granting the connected LLM agent the ability to:
+
+- Read the content of all open browser tabs.
+- Navigate to arbitrary URLs.
+- Execute arbitrary JavaScript in the context of any page you have open.
+- Close tabs and windows.
+
+These capabilities are necessary for the server's function but present security risks if connected to an untrusted or compromised LLM agent.
+
+**Recommendation:** Only use this server with trusted LLM clients and be aware of what pages you have open. Do not use this server in environments where sensitive, non-public data is frequently accessed in your browser tabs.
+
 ## Available Tools
 
-- `get_tabs`: Retrieves all open tabs from Google Chrome browser, returning their titles and URLs. Tabs are grouped by window and displayed in a format like "Window 1-1" (Window 1, Tab 1).
+- `get_tabs`: List every open tab across all windows.
+- `search_tabs`: Search for tabs by keyword in title or URL.
+- `get_active_tab`: Get details about the currently focused tab in the frontmost window.
+- `open_tabs`: Open one or more URLs in new tabs.
+- `close_tabs`: Permanently close one or more tabs by Tab ID.
+- `close_window`: Close an entire window and all its tabs.
+- `create_window`: Open a new browser window, optionally in incognito mode.
+- `activate_tab`: Bring a tab into focus.
+- `reload_tabs`: Reload one or more tabs by Tab ID.
+- `stop_tabs`: Stop loading one or more tabs by Tab ID.
+- `go_back`: Navigate back in the tab's history.
+- `go_forward`: Navigate forward in the tab's history.
+- `navigate_tab`: Change the URL of an existing tab.
+- `execute_script`: Run JavaScript in a tab's page context.
 
-- `close_tab`: Closes a specific tab in Google Chrome using window and tab indices.
-  - Parameters:
-    - windowIndex: Window number (starts from 1)
-    - tabIndex: Tab number within the window (starts from 1)
-  - Note: When closing multiple tabs, start from the highest index numbers to avoid index shifting. After closing tabs, use get_tabs to confirm the changes.
+## Schema Stability
+
+This project adheres to strict schema evolution rules to ensure reliability for all connected MCP clients:
+
+1. **Breaking Changes**: Any change to tool definitions that breaks existing consumers (e.g., changing parameter names, removing parameters, changing types, or altering a tool's primary purpose) is treated as a major change.
+2. **Versioning**: We follow [Semantic Versioning (SemVer)](https://semver.org/):
+   - **MAJOR**: Breaking changes to the schema.
+   - **MINOR**: Adding new tools or extending parameters in a non-breaking way (e.g., adding an optional parameter).
+   - **PATCH**: Internal refactoring, performance improvements, or bug fixes that do not affect the tool schema.
+3. **Compatibility**: We prioritize maintaining backward compatibility. Changes to tool definitions are designed to ensure existing automation flows remain functional.
 
 ## Notes
 
-- This tool is designed for macOS only due to its dependency on AppleScript.
-- Requires Google Chrome to be installed and running.
-- Accessibility permissions must be granted for Chrome.
+- This tool is designed for **macOS only** due to its dependency on AppleScript.
+- Requires **Google Chrome** (or a compatible browser like Brave or Chromium) to be installed and running.
+- **Accessibility permissions** must be granted for the browser in System Settings for the tool to function.
 
 ## License
 
