@@ -5,6 +5,10 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { ListToolsRequestSchema, CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
+
+// Keep serverInfo in sync with the published package version (dist/ -> ../package.json)
+const PKG_VERSION: string = createRequire(import.meta.url)("../package.json").version;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -447,7 +451,7 @@ const GetTabsSchema = z.object({ browser: BrowserParam });
 // ─── MCP server ───────────────────────────────────────────────────────────────
 
 const server = new Server(
-  { name: "mcp-browser-buddy", version: "0.0.1" },
+  { name: "mcp-browser-buddy", version: PKG_VERSION },
   { capabilities: { tools: {} } },
 );
 
