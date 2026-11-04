@@ -10,7 +10,7 @@ To use this tool with Claude Desktop, simply add the following to your Claude De
 
 ```json
 {
-  "tools": {
+  "mcpServers": {
     "browser-buddy": {
       "command": "npx",
       "args": ["-y", "@dacodedbeat/mcp-browser-buddy"]
@@ -38,11 +38,10 @@ The following sections are for those who want to develop or modify the tool.
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 23.6+
 - macOS (for AppleScript operations)
 - Google Chrome
 - Claude Desktop (install from https://claude.ai/desktop)
-- tsx (install via `npm install -g tsx`)
 
 ### Installation
 
@@ -70,11 +69,12 @@ These capabilities are necessary for the server's function but present security 
 
 ## Available Tools
 
-- `get_tabs`: List every open tab across all windows.
-- `search_tabs`: Search for tabs by keyword in title or URL.
+- `get_tabs`: List open tabs grouped by window, one compact line each. Use `summary`, `windowId`, `limit`/`offset` with hundreds of tabs.
+- `search_tabs`: Search tabs by keyword in title or URL (supports `windowId`, `limit`, `offset`).
+- `find_duplicates`: Group tabs with the same URL (ignoring #fragment / trailing slash), so you can dedupe without listing every tab.
 - `get_active_tab`: Get details about the currently focused tab in the frontmost window.
 - `open_tabs`: Open one or more URLs in new tabs.
-- `close_tabs`: Permanently close one or more tabs by Tab ID.
+- `close_tabs`: Permanently close one or more tabs by Tab ID; reports IDs that were not found.
 - `close_window`: Close an entire window and all its tabs.
 - `create_window`: Open a new browser window, optionally in incognito mode.
 - `activate_tab`: Bring a tab into focus.
