@@ -32,6 +32,9 @@ jobs:
       - name: Run prepack checks
         run: npm run prepack
 
+      - name: Test
+        run: npm test
+
       - name: Release
         run: npx semantic-release
         env:
