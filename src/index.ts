@@ -52,7 +52,7 @@ function asAS(value: string): string {
       }
       tokens.push(`(ASCII character ${code})`);
     } else {
-      buf += ch;
+      buf += ch === "\\" ? "\\\\" : ch;
     }
   }
   if (buf) tokens.push(`"${buf}"`);
