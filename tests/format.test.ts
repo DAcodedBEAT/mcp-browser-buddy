@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ChromeTab, ChromeWindow } from "../src/applescript.ts";
 import {
   filterTabs,
+  formatClosed,
   formatDuplicates,
   formatTabs,
   summarizeWindows,
@@ -106,5 +107,14 @@ describe("formatDuplicates", () => {
   });
   it("says so when there are none", () => {
     expect(formatDuplicates([win(2)])).toBe("No duplicate tabs.");
+  });
+});
+
+describe("formatClosed", () => {
+  it("lists closed tabs with a reopen hint, nothing when empty", () => {
+    expect(formatClosed([{ id: "1", title: "A", url: "https://a.com" }])).toContain(
+      "1 A — https://a.com",
+    );
+    expect(formatClosed([])).toBe("");
   });
 });

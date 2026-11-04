@@ -32,7 +32,9 @@ const hostOf = (url: string) => {
   }
 };
 
-export const tabLine = (t: ChromeTab) =>
+export const tabLine = (
+  t: Pick<ChromeTab, "id" | "title" | "url"> & Partial<Pick<ChromeTab, "isActive" | "loading">>,
+) =>
   `${t.id}${t.isActive ? "★" : ""}${t.loading ? "…" : ""} ${clip(oneLine(t.title), TITLE_MAX)} — ${clip(oneLine(t.url), URL_MAX)}`;
 
 const windowHeader = (w: ChromeWindow, count: string) => {
@@ -146,3 +148,9 @@ export function formatDuplicates(windows: ChromeWindow[]): string {
     ...more,
   ].join("\n");
 }
+
+// Record of what a close removed, so the caller can reopen it with open_tabs.
+export const formatClosed = (tabs: Pick<ChromeTab, "id" | "title" | "url">[]) =>
+  tabs.length
+    ? `\n${tabs.map(tabLine).join("\n")}\nReopen with open_tabs using the urls above.`
+    : "";

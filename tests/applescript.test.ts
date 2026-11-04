@@ -7,6 +7,8 @@ import {
   buildGetTabsScript,
   buildNavigateScript,
   buildOpenTabsScript,
+  friendlyScriptError,
+  parseClosedTabs,
   parseTabRecords,
 } from "../src/applescript.ts";
 
@@ -22,6 +24,8 @@ const compiles = (script: string) => {
   });
 };
 const mac = process.platform === "darwin" ? describe : describe.skip;
+// osacompile spawns a process per script; give it headroom when the machine is busy.
+const SLOW = 30_000;
 
 describe("asAS", () => {
   it("doubles backslashes so they cannot escape the literal", () => {
@@ -35,19 +39,27 @@ describe("asAS", () => {
 
 mac("generated scripts compile (osacompile)", () => {
   const nasty = ['\\" & (do shell script "id") --', 'a"b', "/\\d+/", "line\nbreak", "é😀"];
-  it("survive hostile strings in every interpolation site", () => {
-    for (const s of nasty) {
-      compiles(buildNavigateScript("Google Chrome", "1", s));
-      compiles(buildOpenTabsScript("Google Chrome", [s, "https://a.com"]));
-      compiles(buildOpenTabsScript("Google Chrome", [s], "5", true));
-    }
-  });
-  it("compile for every builder", () => {
-    compiles(buildGetTabsScript("Google Chrome"));
-    compiles(buildGetTabsScript("Google Chrome", "42"));
-    compiles(buildCloseTabsScript("Google Chrome", ["1", "2"]));
-    compiles(buildBulkCommandScript("Google Chrome", ["1"], "reload"));
-  });
+  it(
+    "survive hostile strings in every interpolation site",
+    () => {
+      for (const s of nasty) {
+        compiles(buildNavigateScript("Google Chrome", "1", s));
+        compiles(buildOpenTabsScript("Google Chrome", [s, "https://a.com"]));
+        compiles(buildOpenTabsScript("Google Chrome", [s], "5", true));
+      }
+    },
+    SLOW,
+  );
+  it(
+    "compile for every builder",
+    () => {
+      compiles(buildGetTabsScript("Google Chrome"));
+      compiles(buildGetTabsScript("Google Chrome", "42"));
+      compiles(buildCloseTabsScript("Google Chrome", ["1", "2"]));
+      compiles(buildBulkCommandScript("Google Chrome", ["1"], "reload"));
+    },
+    SLOW,
+  );
   it("does not let a hostile string become code (injection regression)", () => {
     const script = buildNavigateScript("Google Chrome", "1", '\\" & (do shell script "id") --');
     expect(script).not.toMatch(/do shell script "id"\) --\s*$/m);
@@ -80,5 +92,26 @@ describe("parseTabRecords", () => {
   });
   it("handles an empty result", () => {
     expect(parseTabRecords("0" + RS)).toEqual({ windows: [], skipped: 0 });
+  });
+});
+
+describe("parseClosedTabs", () => {
+  it("parses id/title/url records and drops malformed ones", () => {
+    const raw = [rec("1", "A", "https://a.com"), rec("x", "B", "u"), "junk"].join(RS) + "\n";
+    expect(parseClosedTabs(raw)).toEqual([{ id: "1", title: "A", url: "https://a.com" }]);
+    expect(parseClosedTabs("\n")).toEqual([]);
+  });
+});
+
+describe("friendlyScriptError", () => {
+  it("explains the disabled Apple Events JavaScript setting", () => {
+    const raw =
+      "Google Chrome got an error: Executing JavaScript through AppleScript is turned off.";
+    expect(friendlyScriptError(raw)).toContain(
+      "View > Developer > Allow JavaScript from Apple Events",
+    );
+  });
+  it("passes other errors through", () => {
+    expect(friendlyScriptError("Tab 1 not found")).toBe("Tab 1 not found");
   });
 });

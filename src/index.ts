@@ -13,6 +13,7 @@ import {
   TAB_LINE_LEGEND,
   countTabs,
   filterTabs,
+  formatClosed,
   formatDuplicates,
   formatTabs,
   summarizeWindows,
@@ -201,25 +202,26 @@ tool(
 tool(
   "close_tabs",
   "Close Tabs",
-  "Permanently close one or more tabs by Tab ID. Reports any IDs that were not found (e.g. stale after a listing).",
+  "Close one or more tabs by Tab ID. Returns the title and URL of every closed tab (reopen with open_tabs) and any IDs that were not found (e.g. stale after a listing).",
   DESTRUCTIVE,
   { tabIds: tabIdsField, browser: browserField },
   async ({ browser, tabIds }) => {
     const closed = await chrome.closeTabs(browser, tabIds);
-    const missing = tabIds.filter((id) => !closed.includes(id));
-    return `Closed ${closed.length} tab(s).${missing.length ? ` Not found: ${missing.join(", ")}` : ""}`;
+    const missing = tabIds.filter((id) => !closed.some((t) => t.id === id));
+    return `Closed ${closed.length} tab(s).${missing.length ? ` Not found: ${missing.join(", ")}.` : ""}${formatClosed(closed)}`;
   },
 );
 
 tool(
   "close_window",
   "Close Window",
-  "Close an entire window and all its tabs.",
+  "Close an entire window and all its tabs. Returns the title and URL of every tab that was in it (reopen with open_tabs).",
   DESTRUCTIVE,
   { windowId: windowIdField, browser: browserField },
   async ({ browser, windowId }) => {
+    const { windows } = await chrome.getTabs(browser, windowId);
     await chrome.closeWindow(browser, windowId);
-    return `Closed window [ID: ${windowId}]`;
+    return `Closed window [ID: ${windowId}]${formatClosed(windows.flatMap((w) => w.tabs))}`;
   },
 );
 
@@ -322,7 +324,7 @@ tool(
 tool(
   "execute_script",
   "Execute Script",
-  "Run JavaScript in a tab's page context.",
+  "Run JavaScript in a tab's page context. Requires Chrome's View > Developer > Allow JavaScript from Apple Events to be enabled.",
   { ...DESTRUCTIVE, openWorldHint: true },
   {
     tabId: tabIdField,

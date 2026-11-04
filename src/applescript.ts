@@ -191,13 +191,16 @@ const buildCreateWindowScript = (browser: string, mode: "normal" | "incognito") 
   return (id of newWin) as string`,
   );
 
-// Closes every matching tab and returns the IDs it actually closed.
+// Closes every matching tab and returns "id FS title FS url" records (RS-separated) of what it
+// actually closed, captured before closing so callers can offer an undo.
 export function buildCloseTabsScript(browser: string, tabIds: string[]): string {
   return tell(
     browser,
     `
   set tids to ${idList(tabIds)}
-  set closedIDs to {}
+  set fs to (ASCII character 31)
+  set rs to (ASCII character 30)
+  set closedRecs to {}
   repeat with wIdx from 1 to (count of windows)
     -- Guard: closing the last tab in a window auto-closes it, shrinking the list
     if wIdx > (count of windows) then exit repeat
@@ -208,14 +211,15 @@ export function buildCloseTabsScript(browser: string, tabIds: string[]): string 
         set t to tab tIdx of w
         set tID to (id of t) as string
         if tID is in tids then
+          set rec to tID & fs & (title of t) & fs & (URL of t)
           close t
-          copy tID to end of closedIDs
+          copy rec to end of closedRecs
         end if
       end try
     end repeat
   end repeat
-  set AppleScript's text item delimiters to ","
-  return closedIDs as string`,
+  set AppleScript's text item delimiters to rs
+  return closedRecs as string`,
   );
 }
 
@@ -362,13 +366,36 @@ export const reloadTabs = (b: string, ids: string[]) =>
 export const stopTabs = (b: string, ids: string[]) =>
   runAppleScript(buildBulkCommandScript(b, ids, "stop"));
 
-export async function executeScript(b: string, tabId: string, javascript: string) {
-  return (await runAppleScript(buildExecuteScript(b, tabId, javascript))).trim();
+// Chrome refuses execute javascript unless this View-menu setting is on; say how to fix it.
+export function friendlyScriptError(message: string): string {
+  return /turned off/i.test(message) && /JavaScript/i.test(message)
+    ? "Chrome has JavaScript from Apple Events disabled. Enable it in Chrome: View > Developer > Allow JavaScript from Apple Events (per profile), then retry."
+    : message;
 }
 
-export async function closeTabs(b: string, tabIds: string[]): Promise<string[]> {
-  const out = (await runAppleScript(buildCloseTabsScript(b, tabIds))).trim();
-  return out ? out.split(",") : [];
+export async function executeScript(b: string, tabId: string, javascript: string) {
+  try {
+    return (await runAppleScript(buildExecuteScript(b, tabId, javascript))).trim();
+  } catch (error) {
+    throw new Error(friendlyScriptError(error instanceof Error ? error.message : String(error)), {
+      cause: error,
+    });
+  }
+}
+
+export type ClosedTab = Pick<ChromeTab, "id" | "title" | "url">;
+
+export function parseClosedTabs(raw: string): ClosedTab[] {
+  return raw
+    .replace(/\n$/, "")
+    .split(RECORD_SEP)
+    .map((r) => r.split(FIELD_SEP))
+    .filter((f) => f.length === 3 && DIGITS.test(f[0]))
+    .map(([id, title, url]) => ({ id, title, url }));
+}
+
+export async function closeTabs(b: string, tabIds: string[]): Promise<ClosedTab[]> {
+  return parseClosedTabs(await runAppleScript(buildCloseTabsScript(b, tabIds)));
 }
 
 export async function createWindow(b: string, mode: "normal" | "incognito"): Promise<string> {
