@@ -6,6 +6,7 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { createRequire } from "node:module";
 import * as chrome from "./applescript.ts";
+import { isBrowserPlayingAudio } from "./audio.ts";
 import { ALLOWED_BROWSERS } from "./applescript.ts";
 import {
   DEFAULT_LIMIT,
@@ -125,8 +126,13 @@ tool(
     browser: browserField,
   },
   async ({ browser, windowId, summary, limit, offset }) => {
-    const { windows, skipped } = await chrome.getTabs(browser, windowId);
-    const head = `${countTabs(windows)} tab(s) in ${windows.length} window(s) of ${browser}.`;
+    const [{ windows, skipped }, audio] = await Promise.all([
+      chrome.getTabs(browser, windowId),
+      isBrowserPlayingAudio(browser),
+    ]);
+    const sound =
+      audio === null ? "" : ` Audio: ${audio ? "playing (browser-wide, tab unknown)" : "none"}.`;
+    const head = `${countTabs(windows)} tab(s) in ${windows.length} window(s) of ${browser}.${sound}`;
     const warn = skipped ? ` (${skipped} window(s) could not be read and were skipped)` : "";
     const body = summary ? summarizeWindows(windows) : formatTabs(windows, limit, offset);
     return `${head}${warn}\n${TAB_LINE_LEGEND}\n\n${body}`;

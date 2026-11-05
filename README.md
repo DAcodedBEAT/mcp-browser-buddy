@@ -69,7 +69,7 @@ These capabilities are necessary for the server's function but present security 
 
 ## Available Tools
 
-- `get_tabs`: List open tabs grouped by window, one compact line each. Use `summary`, `windowId`, `limit`/`offset` with hundreds of tabs.
+- `get_tabs`: List open tabs grouped by window, one compact line each. Use `summary`, `windowId`, `limit`/`offset` with hundreds of tabs. The header also says whether the browser is playing audio (browser-wide, not per tab).
 - `search_tabs`: Search tabs by keyword in title or URL (supports `windowId`, `limit`, `offset`).
 - `find_duplicates`: Group tabs with the same URL (ignoring #fragment / trailing slash), so you can dedupe without listing every tab.
 - `get_active_tab`: Get details about the currently focused tab in the frontmost window.
