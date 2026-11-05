@@ -38,7 +38,7 @@ The following sections are for those who want to develop or modify the tool.
 
 ### Prerequisites
 
-- Node.js 23.6+
+- Node.js 22.12+
 - macOS (for AppleScript operations)
 - Google Chrome
 - Claude Desktop (install from https://claude.ai/desktop)
