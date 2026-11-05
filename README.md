@@ -71,6 +71,7 @@ These capabilities are necessary for the server's function but present security 
 
 - `get_tabs`: List open tabs grouped by window, one compact line each. Use `summary`, `windowId`, `limit`/`offset` with hundreds of tabs. The header also says whether the browser is playing audio (browser-wide, not per tab).
 - `search_tabs`: Search tabs by keyword in title or URL (supports `windowId`, `limit`, `offset`).
+- `find_playing_tabs`: Best-effort list of tabs playing audio/video. Checks browser-wide audio, then probes media elements in likely tabs (`all` probes every tab). Works without "Allow JavaScript from Apple Events", but then returns unverified URL-based candidates only.
 - `find_duplicates`: Group tabs with the same URL (ignoring #fragment / trailing slash), so you can dedupe without listing every tab.
 - `get_active_tab`: Get details about the currently focused tab in the frontmost window.
 - `open_tabs`: Open one or more URLs in new tabs.

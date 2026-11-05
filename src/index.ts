@@ -7,6 +7,7 @@ import { z } from "zod";
 import { createRequire } from "node:module";
 import * as chrome from "./applescript.ts";
 import { isBrowserPlayingAudio } from "./audio.ts";
+import { PROBE_JS, findPlaying } from "./playing.ts";
 import { ALLOWED_BROWSERS } from "./applescript.ts";
 import {
   DEFAULT_LIMIT,
@@ -16,6 +17,7 @@ import {
   filterTabs,
   formatClosed,
   formatDuplicates,
+  formatPlaying,
   formatTabs,
   summarizeWindows,
   tabLine,
@@ -167,6 +169,34 @@ tool(
   },
   async ({ browser, windowId }) =>
     formatDuplicates((await chrome.getTabs(browser, windowId)).windows),
+);
+
+tool(
+  "find_playing_tabs",
+  "Find Playing Tabs",
+  "Best-effort: which tabs are playing audio/video. Chrome exposes no audible flag, so this checks whether the browser is playing audio at all, then probes <video>/<audio> in likely media tabs (or all tabs with all=true). If Chrome's Allow JavaScript from Apple Events is off, it still works but only lists likely candidates by URL, unverified. Misses Web Audio and cross-origin iframes.",
+  READ,
+  {
+    all: z
+      .boolean()
+      .default(false)
+      .describe("Probe every tab instead of only likely media sites (slower, capped at 100)."),
+    browser: browserField,
+  },
+  async ({ browser, all }) => {
+    const audio = await isBrowserPlayingAudio(browser);
+    if (audio === false) return formatPlaying(audio, null);
+    const { windows } = await chrome.getTabs(browser);
+    const probe = (id: string) => chrome.executeScriptRaw(browser, id, PROBE_JS);
+    return formatPlaying(
+      audio,
+      await findPlaying(
+        windows.flatMap((w) => w.tabs),
+        probe,
+        all,
+      ),
+    );
+  },
 );
 
 tool(
