@@ -367,15 +367,23 @@ export const stopTabs = (b: string, ids: string[]) =>
   runAppleScript(buildBulkCommandScript(b, ids, "stop"));
 
 // Chrome refuses execute javascript unless this View-menu setting is on; say how to fix it.
+export const isJsDisabledError = (message: string) =>
+  /turned off/i.test(message) && /JavaScript/i.test(message);
+
 export function friendlyScriptError(message: string): string {
-  return /turned off/i.test(message) && /JavaScript/i.test(message)
+  return isJsDisabledError(message)
     ? "Chrome has JavaScript from Apple Events disabled. Enable it in Chrome: View > Developer > Allow JavaScript from Apple Events (per profile), then retry."
     : message;
 }
 
+// Raw: throws osascript's own error. Callers that want to react to the disabled-JS setting use this.
+export async function executeScriptRaw(b: string, tabId: string, javascript: string) {
+  return (await runAppleScript(buildExecuteScript(b, tabId, javascript))).trim();
+}
+
 export async function executeScript(b: string, tabId: string, javascript: string) {
   try {
-    return (await runAppleScript(buildExecuteScript(b, tabId, javascript))).trim();
+    return await executeScriptRaw(b, tabId, javascript);
   } catch (error) {
     throw new Error(friendlyScriptError(error instanceof Error ? error.message : String(error)), {
       cause: error,

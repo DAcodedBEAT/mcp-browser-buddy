@@ -6,6 +6,8 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { createRequire } from "node:module";
 import * as chrome from "./applescript.ts";
+import { isBrowserPlayingAudio } from "./audio.ts";
+import { PROBE_JS, findPlaying } from "./playing.ts";
 import { ALLOWED_BROWSERS } from "./applescript.ts";
 import {
   DEFAULT_LIMIT,
@@ -15,6 +17,7 @@ import {
   filterTabs,
   formatClosed,
   formatDuplicates,
+  formatPlaying,
   formatTabs,
   summarizeWindows,
   tabLine,
@@ -125,8 +128,13 @@ tool(
     browser: browserField,
   },
   async ({ browser, windowId, summary, limit, offset }) => {
-    const { windows, skipped } = await chrome.getTabs(browser, windowId);
-    const head = `${countTabs(windows)} tab(s) in ${windows.length} window(s) of ${browser}.`;
+    const [{ windows, skipped }, audio] = await Promise.all([
+      chrome.getTabs(browser, windowId),
+      isBrowserPlayingAudio(browser),
+    ]);
+    const sound =
+      audio === null ? "" : ` Audio: ${audio ? "playing (browser-wide, tab unknown)" : "none"}.`;
+    const head = `${countTabs(windows)} tab(s) in ${windows.length} window(s) of ${browser}.${sound}`;
     const warn = skipped ? ` (${skipped} window(s) could not be read and were skipped)` : "";
     const body = summary ? summarizeWindows(windows) : formatTabs(windows, limit, offset);
     return `${head}${warn}\n${TAB_LINE_LEGEND}\n\n${body}`;
@@ -161,6 +169,34 @@ tool(
   },
   async ({ browser, windowId }) =>
     formatDuplicates((await chrome.getTabs(browser, windowId)).windows),
+);
+
+tool(
+  "find_playing_tabs",
+  "Find Playing Tabs",
+  "Best-effort: which tabs are playing audio/video. Chrome exposes no audible flag, so this checks whether the browser is playing audio at all, then probes <video>/<audio> in likely media tabs (or all tabs with all=true). If Chrome's Allow JavaScript from Apple Events is off, it still works but only lists likely candidates by URL, unverified. Misses Web Audio and cross-origin iframes.",
+  READ,
+  {
+    all: z
+      .boolean()
+      .default(false)
+      .describe("Probe every tab instead of only likely media sites (slower, capped at 100)."),
+    browser: browserField,
+  },
+  async ({ browser, all }) => {
+    const audio = await isBrowserPlayingAudio(browser);
+    if (audio === false) return formatPlaying(audio, null);
+    const { windows } = await chrome.getTabs(browser);
+    const probe = (id: string) => chrome.executeScriptRaw(browser, id, PROBE_JS);
+    return formatPlaying(
+      audio,
+      await findPlaying(
+        windows.flatMap((w) => w.tabs),
+        probe,
+        all,
+      ),
+    );
+  },
 );
 
 tool(

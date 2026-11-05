@@ -1,5 +1,6 @@
 // Pure output formatting for tab listings. No I/O so it can be unit-tested without Chrome.
 import type { ChromeTab, ChromeWindow } from "./applescript.ts";
+import type { PlayingResult } from "./playing.ts";
 
 export const DEFAULT_LIMIT = 100;
 export const MAX_LIMIT = 200; // hard cap so a client can't re-create the 350-tab context blowup
@@ -7,6 +8,7 @@ const MAX_CHARS = 40_000; // byte-ish budget per response; the continuation line
 const TITLE_MAX = 80;
 const URL_MAX = 2000; // only pathological (data:) URLs hit this; normal URLs stay reusable
 const MAX_DUP_GROUPS = 100;
+const UNVERIFIED_SHOWN = 15;
 
 export const TAB_LINE_LEGEND =
   "Line format: <tabId>[★ active][… loading] title — url (url follows the last ' — '). " +
@@ -154,3 +156,35 @@ export const formatClosed = (tabs: Pick<ChromeTab, "id" | "title" | "url">[]) =>
   tabs.length
     ? `\n${tabs.map(tabLine).join("\n")}\nReopen with open_tabs using the urls above.`
     : "";
+
+// Unverified candidates are only a URL guess (often dozens of youtube tabs): keep it short.
+const section = (title: string, tabs: ChromeTab[], max = Infinity) =>
+  tabs.length
+    ? [
+        `${title} (${tabs.length}):`,
+        ...tabs.slice(0, max).map(tabLine),
+        ...(tabs.length > max ? [`… ${tabs.length - max} more`] : []),
+      ]
+    : [];
+
+export function formatPlaying(audio: boolean | null, r: PlayingResult | null): string {
+  const lines = [
+    `Audio: ${audio === null ? "unknown" : audio ? "playing (browser-wide)" : "none"}.`,
+  ];
+  if (!r) return `${lines[0]} Nothing to find.`;
+  if (r.jsDisabled) {
+    lines.push(
+      "Per-tab check unavailable: Chrome has JavaScript from Apple Events off (View > Developer > Allow JavaScript from Apple Events). Showing likely candidates by URL only.",
+    );
+  }
+  lines.push(
+    ...section("Playing", r.playing),
+    ...section("Likely, unverified", r.unverified, UNVERIFIED_SHOWN),
+    ...section("Probed, silent", r.silent),
+    ...section("Could not probe", r.unknown),
+  );
+  if (r.truncated) lines.push(`… ${r.truncated} more candidate tabs not probed (cap).`);
+  if (!r.playing.length && !r.unverified.length)
+    lines.push("No playing tabs found among those probed.");
+  return lines.join("\n");
+}
