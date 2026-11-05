@@ -67,9 +67,10 @@ mac("generated scripts compile (osacompile)", () => {
   });
 });
 
+const good = (w: string, t: string, title = "T", active = "false") =>
+  rec(w, "name", "normal", t, active, "false", title, "https://a.com");
+
 describe("parseTabRecords", () => {
-  const good = (w: string, t: string, title = "T", active = "false") =>
-    rec(w, "name", "normal", t, active, "false", title, "https://a.com");
   it("parses, sorts windows by ID, and reads the skipped count", () => {
     const raw =
       ["1", good("20", "201", "b", "true"), good("10", "101"), good("20", "202")].join(RS) + "\n";
